@@ -1,34 +1,91 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // Menghubungkan ke inti Firebase
-import 'firebase_options.dart'; // File konfigurasi yang tadi kita buat
-import 'views/task_list_view.dart'; // Halaman daftar tugas yang kita buat sebelumnya
+import 'package:provider/provider.dart';
+
+import 'firebase_options.dart';
+import 'services/auth_service.dart';
+import 'services/group_service.dart';
+import 'services/task_service.dart';
+import 'services/user_service.dart';
+import 'viewmodels/auth_viewmodel.dart';
+import 'viewmodels/group_viewmodel.dart';
+import 'viewmodels/task_viewmodel.dart';
+import 'viewmodels/user_viewmodel.dart';
+import 'views/auth/auth_flow_view.dart';
+import 'views/groups/group_dashboard_view.dart';
 
 void main() async {
-  // 1. Pastikan semua komponen Flutter siap sebelum menjalankan Firebase
-  WidgetsFlutterBinding.ensureInitialized(); 
+  WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Inisialisasi Firebase menggunakan konfigurasi otomatis
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  runApp(const MyApp());
+  runApp(const TaskMateApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class TaskMateApp extends StatelessWidget {
+  const TaskMateApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'TaskMate - Tugas Kelompok',
-      debugShowCheckedModeBanner: false, // Menghilangkan pita debug di pojok kanan
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true, // Menggunakan desain terbaru dari Google
+    return MultiProvider(
+      providers: [
+        Provider(create: (_) => UserService()),
+        ChangeNotifierProvider(
+          create: (context) =>
+              AuthViewModel(AuthService(), context.read<UserService>())
+                ..initialize(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => UserViewModel(context.read<UserService>()),
+        ),
+        ChangeNotifierProxyProvider<AuthViewModel, GroupViewModel>(
+          create: (_) => GroupViewModel(GroupService()),
+          update: (_, auth, groupViewModel) {
+            groupViewModel ??= GroupViewModel(GroupService());
+            groupViewModel.attachUser(auth.currentUser?.uid);
+            return groupViewModel;
+          },
+        ),
+        ChangeNotifierProxyProvider2<
+          GroupViewModel,
+          AuthViewModel,
+          TaskViewModel
+        >(
+          create: (_) => TaskViewModel(TaskService()),
+          update: (_, groupViewModel, authViewModel, taskViewModel) {
+            taskViewModel ??= TaskViewModel(TaskService());
+            taskViewModel.setContext(
+              groupId: groupViewModel.selectedGroupId,
+              viewer: authViewModel.currentUser,
+            );
+            return taskViewModel;
+          },
+        ),
+      ],
+      child: MaterialApp(
+        title: 'TaskMate - Tugas Kelompok',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          useMaterial3: true,
+        ),
+        home: const RootRouter(),
       ),
-      // 3. Menetapkan TaskListView sebagai halaman pertama (Home)
-      home: TaskListView(), 
     );
+  }
+}
+
+class RootRouter extends StatelessWidget {
+  const RootRouter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final authViewModel = context.watch<AuthViewModel>();
+
+    if (authViewModel.currentUser == null) {
+      return const AuthFlowView();
+    }
+
+    return const GroupDashboardView();
   }
 }
