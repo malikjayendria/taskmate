@@ -1,18 +1,24 @@
-# taskmate
+# TaskMate - Aplikasi Manajemen Tugas Kelompok
 
-A new Flutter project.
+Aplikasi mobile berbasis Flutter yang dirancang untuk membantu mahasiswa dalam mengorganisasi tugas kelompok secara real-time. Proyek ini merupakan bagian dari Tugas Besar mata kuliah Aplikasi Perangkat Bergerak.
 
-## Getting Started
+## 🚀 Fitur Utama
+- **Real-time Task Tracking**: Pantau progres tugas kelompok secara instan menggunakan Firebase Firestore.
+- **Manajemen Status**: Ubah status tugas dari 'To Do' ke 'Completed' dengan satu sentuhan.
+- **Arsitektur Firebase**: Terhubung langsung ke cloud tanpa perlu backend server manual.
 
-This project is a starting point for a Flutter application.
+## 🛠️ Teknologi yang Digunakan
+- **Frontend**: Flutter (Dart)
+- **Backend/Database**: Cloud Firebase (Firestore & Authentication)
+- **Target OS**: Android & iOS (Min. iOS 15.0)
 
-A few resources to get you started if this is your first Flutter project:
+## 📁 Struktur Folder
+- `lib/models/`: Definisi struktur data tugas.
+- `lib/services/`: Logika koneksi Firebase.
+- `lib/views/`: Antarmuka (UI) aplikasi.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-# taskmate
+## ⚙️ Cara Menjalankan Proyek
+1. Pastikan Flutter SDK sudah terinstal (Mac M1 Recommended).
+2. Clone repositori ini:
+   ```bash
+   git clone [https://github.com/username-kamu/taskmate.git](https://github.com/username-kamu/taskmate.git)
