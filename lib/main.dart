@@ -13,6 +13,7 @@ import 'viewmodels/task_viewmodel.dart';
 import 'viewmodels/user_viewmodel.dart';
 import 'views/auth/auth_flow_view.dart';
 import 'views/groups/group_dashboard_view.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,10 +66,7 @@ class TaskMateApp extends StatelessWidget {
       child: MaterialApp(
         title: 'TaskMate - Tugas Kelompok',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.light(),
         home: const RootRouter(),
       ),
     );

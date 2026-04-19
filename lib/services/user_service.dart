@@ -26,6 +26,14 @@ class UserService {
     await _usersRef.doc(uid).update({'role': role});
   }
 
+  Future<void> updateDisplayName(String uid, String displayName) async {
+    await _usersRef.doc(uid).update({'displayName': displayName});
+  }
+
+  Future<void> deleteUser(String uid) async {
+    await _usersRef.doc(uid).delete();
+  }
+
   Stream<List<AppUser>> listenToUsers() {
     return _usersRef
         .orderBy('displayName')

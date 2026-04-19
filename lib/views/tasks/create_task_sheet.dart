@@ -43,26 +43,34 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
   }
 
   Future<void> _loadMembers() async {
-    final group = context.read<GroupViewModel>().byId(widget.groupId);
-    if (group == null) {
-      setState(() {
-        _isLoadingMembers = false;
-      });
-      return;
+    final userViewModel = context.read<UserViewModel>();
+    userViewModel.startListening();
+
+    // Tunggu sejenak agar data terisi jika masih kosong
+    if (userViewModel.users.isEmpty) {
+      await Future.delayed(const Duration(milliseconds: 500));
     }
 
-    final members = await context.read<UserViewModel>().fetchUsersByIds(
-      group.members,
-    );
-    setState(() {
-      _members = members;
-      _assigneeId = members.isNotEmpty ? members.first.uid : null;
-      _isLoadingMembers = false;
-    });
+    if (mounted) {
+      setState(() {
+        _members = userViewModel.users;
+        _assigneeId = _members.isNotEmpty ? _members.first.uid : null;
+        _isLoadingMembers = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Watch users to keep dropdown updated
+    final allUsers = context.watch<UserViewModel>().users;
+    if (_members.length != allUsers.length) {
+      _members = allUsers;
+      if (_assigneeId == null && _members.isNotEmpty) {
+        _assigneeId = _members.first.uid;
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Form(
@@ -120,7 +128,7 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
             if (!_isLoadingMembers && _members.isEmpty) ...[
               const SizedBox(height: 8),
               const Text(
-                'Tidak ada anggota pada kelompok ini. Tambahkan anggota '
+                'Tidak ada anggota sistem. Tambahkan anggota '
                 'sebelum membuat tugas.',
                 style: TextStyle(color: Colors.redAccent),
               ),
@@ -171,7 +179,9 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
 
   Future<void> _submit(BuildContext context) async {
     if (!_formKey.currentState!.validate()) return;
-    final creatorId = context.read<AuthViewModel>().currentUser?.uid;
+    final authViewModel = context.read<AuthViewModel>();
+    final groupViewModel = context.read<GroupViewModel>();
+    final creatorId = authViewModel.currentUser?.uid;
     if (creatorId == null) return;
     if (_assigneeId == null) return;
 
@@ -190,6 +200,13 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
 
     setState(() => _isSubmitting = true);
     try {
+      // 1. Pastikan penanggung jawab adalah anggota kelompok
+      final group = groupViewModel.byId(widget.groupId);
+      if (group != null && !group.members.contains(_assigneeId)) {
+        await groupViewModel.addMember(widget.groupId, _assigneeId!);
+      }
+
+      // 2. Buat tugas
       final task = TaskModel(
         id: '',
         groupId: widget.groupId,
@@ -205,6 +222,12 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
 
       await context.read<TaskViewModel>().createTask(task);
       if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal membuat tugas: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

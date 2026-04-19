@@ -31,6 +31,13 @@ class TaskService {
     await _tasksRef.doc(taskId).update({'status': newStatus});
   }
 
+  Future<void> updateTaskAssignee(String taskId, String assigneeId, String assigneeName) async {
+    await _tasksRef.doc(taskId).update({
+      'assigneeId': assigneeId,
+      'assigneeName': assigneeName,
+    });
+  }
+
   Future<void> deleteTask(String taskId) async {
     await _tasksRef.doc(taskId).delete();
   }

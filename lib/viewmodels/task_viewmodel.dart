@@ -70,6 +70,14 @@ class TaskViewModel extends ChangeNotifier {
     await _taskService.updateTaskStatus(taskId, status);
   }
 
+  Future<void> updateAssignee(String taskId, String assigneeId, String assigneeName) async {
+    await _taskService.updateTaskAssignee(taskId, assigneeId, assigneeName);
+  }
+
+  Future<void> deleteTask(String taskId) async {
+    await _taskService.deleteTask(taskId);
+  }
+
   List<TaskModel> _filterTasks(List<TaskModel> data) {
     if (_viewer?.role == 'admin') {
       return data;

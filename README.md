@@ -21,4 +21,4 @@ Aplikasi mobile berbasis Flutter yang dirancang untuk membantu mahasiswa dalam m
 1. Pastikan Flutter SDK sudah terinstal (Mac M1 Recommended).
 2. Clone repositori ini:
    ```bash
-   git clone [https://github.com/username-kamu/taskmate.git](https://github.com/username-kamu/taskmate.git)
+   git clone [https://github.com/username/taskmate.git](https://github.com/username/taskmate.git)

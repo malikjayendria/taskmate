@@ -60,7 +60,39 @@ class _ManageUsersViewState extends State<ManageUsersView> {
                               ),
                             ),
                           )
-                        : _RoleDropdown(user: user),
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _RoleDropdown(user: user),
+                              PopupMenuButton<String>(
+                                onSelected: (value) {
+                                  if (value == 'edit') {
+                                    _showEditNameDialog(context, user);
+                                  } else if (value == 'delete') {
+                                    _showDeleteConfirmDialog(context, user);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: ListTile(
+                                      leading: Icon(Icons.edit),
+                                      title: Text('Edit Nama'),
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: ListTile(
+                                      leading: Icon(Icons.delete, color: Colors.red),
+                                      title: Text('Hapus User', style: TextStyle(color: Colors.red)),
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                   );
                 },
               ),
@@ -73,10 +105,79 @@ class _ManageUsersViewState extends State<ManageUsersView> {
     );
   }
 
+  Future<void> _showEditNameDialog(BuildContext context, AppUser user) async {
+    final controller = TextEditingController(text: user.displayName);
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Nama Pengguna'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Nama Lengkap'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.trim().isEmpty) return;
+              try {
+                await context.read<UserViewModel>().updateDisplayName(
+                      user.uid,
+                      controller.text.trim(),
+                    );
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Nama berhasil diperbarui')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal memperbarui nama: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showDeleteConfirmDialog(BuildContext context, AppUser user) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Pengguna'),
+        content: Text('Apakah Anda yakin ingin menghapus ${user.displayName}? Tindakan ini tidak dapat dibatalkan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              await context.read<UserViewModel>().deleteUser(user.uid);
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openCreateUserSheet(BuildContext context) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => const SafeArea(child: CreateUserSheet()),
     );
   }

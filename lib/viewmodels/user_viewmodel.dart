@@ -28,6 +28,14 @@ class UserViewModel extends ChangeNotifier {
     return _userService.updateRole(uid, role);
   }
 
+  Future<void> updateDisplayName(String uid, String displayName) {
+    return _userService.updateDisplayName(uid, displayName);
+  }
+
+  Future<void> deleteUser(String uid) {
+    return _userService.deleteUser(uid);
+  }
+
   @override
   void dispose() {
     _userSubscription?.cancel();
