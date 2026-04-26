@@ -44,8 +44,8 @@ class _ManageUsersViewState extends State<ManageUsersView> {
                   return ListTile(
                     leading: CircleAvatar(
                       child: Text(
-                        user.displayName.isNotEmpty
-                            ? user.displayName.characters.first
+                        user.displayName.trim().isNotEmpty
+                            ? user.displayName.trim().characters.first
                             : '?',
                       ),
                     ),

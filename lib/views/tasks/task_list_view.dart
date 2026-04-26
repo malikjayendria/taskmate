@@ -204,7 +204,11 @@ class TaskListView extends StatelessWidget {
                           final user = users[index];
                           return ListTile(
                             leading: CircleAvatar(
-                              child: Text(user.displayName[0]),
+                              child: Text(
+                                user.displayName.trim().isNotEmpty
+                                    ? user.displayName.trim().characters.first
+                                    : '?',
+                              ),
                             ),
                             title: Text(user.displayName),
                             onTap: () => Navigator.pop(context, user),

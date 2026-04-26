@@ -59,7 +59,7 @@ class AuthService {
     if (_adminApp != null) return _adminApp!;
     try {
       _adminApp = Firebase.app('taskmate-admin');
-    } on FirebaseException {
+    } catch (_) {
       _adminApp = await Firebase.initializeApp(
         name: 'taskmate-admin',
         options: DefaultFirebaseOptions.currentPlatform,
