@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/group_model.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/group_viewmodel.dart';
 import '../tasks/task_list_view.dart';
@@ -29,15 +30,18 @@ class GroupDashboardView extends StatelessWidget {
             return [
               SliverAppBar(
                 pinned: true,
-                expandedHeight: 170,
+                expandedHeight: 210,
                 forceElevated: innerBoxIsScrolled,
                 flexibleSpace: FlexibleSpaceBar(
                   titlePadding: const EdgeInsetsDirectional.only(
                     start: 16,
-                    bottom: 12,
+                    bottom: 14,
                     end: 16,
                   ),
-                  title: const Text('TaskMate'),
+                  title: const Text(
+                    'TaskMate',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
                   background: _DashboardHeader(
                     displayName: (user?.displayName ?? '').trim().isEmpty
                         ? 'Halo'
@@ -80,13 +84,23 @@ class GroupDashboardView extends StatelessWidget {
                                       ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
                               ),
-                              if (isAdmin)
+                              if (isAdmin) ...[
+                                if (selectedGroup != null)
+                                  IconButton(
+                                    onPressed: () => _showGroupManagementMenu(
+                                      context,
+                                      selectedGroup,
+                                    ),
+                                    icon: const Icon(Icons.settings, size: 20),
+                                    tooltip: 'Kelola Kelompok',
+                                  ),
                                 TextButton.icon(
                                   onPressed: () =>
                                       _openCreateGroupSheet(context),
                                   icon: const Icon(Icons.group_add, size: 18),
                                   label: const Text('Buat'),
                                 ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -179,6 +193,122 @@ class GroupDashboardView extends StatelessWidget {
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const ManageUsersView()));
+  }
+
+  void _showGroupManagementMenu(BuildContext context, GroupModel group) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Kelola Kelompok: ${group.name}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Edit Nama/Deskripsi'),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditGroupDialog(context, group);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text(
+                'Hapus Kelompok',
+                style: TextStyle(color: Colors.red),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteGroupConfirm(context, group);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEditGroupDialog(BuildContext context, GroupModel group) async {
+    final nameController = TextEditingController(text: group.name);
+    final descController = TextEditingController(text: group.description);
+
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Kelompok'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Nama Kelompok'),
+            ),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(labelText: 'Deskripsi'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.trim().isEmpty) return;
+              await context.read<GroupViewModel>().updateGroup(
+                groupId: group.id,
+                name: nameController.text.trim(),
+                description: descController.text.trim(),
+              );
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showDeleteGroupConfirm(
+    BuildContext context,
+    GroupModel group,
+  ) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Kelompok'),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus kelompok "${group.name}"? '
+          'Semua tugas di dalamnya juga akan terhapus. Akun anggota tetap aman.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              await context.read<GroupViewModel>().deleteGroup(group.id);
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _openCreateGroupSheet(BuildContext context) {

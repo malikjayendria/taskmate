@@ -220,10 +220,6 @@ class _GroupPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (isAdmin && selected) ...[
-                Icon(Icons.edit, size: 14, color: fg.withOpacity(0.9)),
-                const SizedBox(width: 6),
-              ],
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 220),
                 child: Text(
@@ -233,8 +229,48 @@ class _GroupPill extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w700, color: fg),
                 ),
               ),
+              if (isAdmin && selected) ...[
+                const SizedBox(width: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _PillActionIcon(
+                      icon: Icons.edit_note,
+                      color: fg,
+                      onTap: onLongPress, // Triggers the same menu
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PillActionIcon extends StatelessWidget {
+  const _PillActionIcon({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: Icon(icon, size: 20, color: color.withOpacity(0.85)),
         ),
       ),
     );

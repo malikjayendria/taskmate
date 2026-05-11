@@ -61,24 +61,31 @@ class GroupService {
   }
 
   Future<void> deleteGroup(String groupId) async {
-    final batch = _firestore.batch();
-
     final groupDoc = await _groupsRef.doc(groupId).get();
+    if (!groupDoc.exists) return;
+
     final memberIds = List<String>.from(groupDoc.data()?['members'] ?? []);
 
     final tasksSnapshot = await _firestore
         .collection('tasks')
         .where('groupId', isEqualTo: groupId)
         .get();
+
+    final batch = _firestore.batch();
+
     for (var doc in tasksSnapshot.docs) {
       batch.delete(doc.reference);
     }
 
     for (var userId in memberIds) {
       final userRef = _firestore.collection('users').doc(userId);
-      batch.update(userRef, {
-        'groupIds': FieldValue.arrayRemove([groupId]),
-      });
+      batch.set(
+        userRef,
+        {
+          'groupIds': FieldValue.arrayRemove([groupId]),
+        },
+        SetOptions(merge: true),
+      );
     }
 
     batch.delete(_groupsRef.doc(groupId));
