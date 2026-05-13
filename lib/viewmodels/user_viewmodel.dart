@@ -1,7 +1,5 @@
 import 'dart:async';
-
 import 'package:flutter/foundation.dart';
-
 import '../models/app_user.dart';
 import '../services/user_service.dart';
 
@@ -14,9 +12,18 @@ class UserViewModel extends ChangeNotifier {
   StreamSubscription<List<AppUser>>? _userSubscription;
 
   void startListening() {
-    _userSubscription ??= _userService.listenToUsers().listen((event) {
+    if (_userSubscription != null) {
+      if (kDebugMode) print('DEBUG: UserViewModel.startListening() - already listening');
+      return;
+    }
+    
+    if (kDebugMode) print('DEBUG: UserViewModel.startListening() - starting new listener');
+    _userSubscription = _userService.listenToUsers().listen((event) {
+      if (kDebugMode) print('DEBUG: UserViewModel received ${event.length} users');
       users = event;
       notifyListeners();
+    }, onError: (e) {
+      if (kDebugMode) print('DEBUG: UserViewModel error listening to users: $e');
     });
   }
 
@@ -38,6 +45,7 @@ class UserViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (kDebugMode) print('DEBUG: UserViewModel.dispose()');
     _userSubscription?.cancel();
     super.dispose();
   }

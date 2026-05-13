@@ -55,10 +55,7 @@ class TaskMateApp extends StatelessWidget {
           create: (_) => TaskViewModel(TaskService()),
           update: (_, groupViewModel, authViewModel, taskViewModel) {
             taskViewModel ??= TaskViewModel(TaskService());
-            taskViewModel.setContext(
-              groupId: groupViewModel.selectedGroupId,
-              viewer: authViewModel.currentUser,
-            );
+            taskViewModel.attachGroup(groupViewModel.selectedGroupId);
             return taskViewModel;
           },
         ),

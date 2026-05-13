@@ -1,8 +1,5 @@
 import 'dart:async';
-
 import 'package:flutter/foundation.dart';
-
-import '../models/app_user.dart';
 import '../models/task_models.dart';
 import '../services/task_service.dart';
 
@@ -13,19 +10,18 @@ class TaskViewModel extends ChangeNotifier {
 
   List<TaskModel> tasks = [];
   bool isLoading = false;
-  String? _groupId;
-  AppUser? _viewer;
+  String? errorMessage;
+
   StreamSubscription<List<TaskModel>>? _taskSubscription;
+  String? _currentGroupId;
 
-  void setContext({required String? groupId, required AppUser? viewer}) {
-    final sameGroup = _groupId == groupId;
-    final sameViewer = _viewer?.uid == viewer?.uid;
-    if (sameGroup && sameViewer) return;
-
-    _groupId = groupId;
-    _viewer = viewer;
+  void attachGroup(String? groupId) {
+    if (_currentGroupId == groupId) return;
+    _currentGroupId = groupId;
     _taskSubscription?.cancel();
+    _taskSubscription = null;
     tasks = [];
+    errorMessage = null;
 
     if (groupId == null) {
       notifyListeners();
@@ -35,25 +31,19 @@ class TaskViewModel extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    _taskSubscription = _taskService
-        .listenToTasks(groupId)
-        .listen(
-          (data) {
-            if (kDebugMode) {
-              print('DEBUG: Received ${data.length} tasks for group $groupId');
-            }
-            tasks = _filterTasks(data);
-            isLoading = false;
-            notifyListeners();
-          },
-          onError: (error) {
-            if (kDebugMode) {
-              print('DEBUG: Error listening to tasks: $error');
-            }
-            isLoading = false;
-            notifyListeners();
-          },
-        );
+    _taskSubscription = _taskService.listenToTasks(groupId).listen(
+      (data) {
+        tasks = data;
+        isLoading = false;
+        errorMessage = null;
+        notifyListeners();
+      },
+      onError: (error) {
+        isLoading = false;
+        errorMessage = error.toString();
+        notifyListeners();
+      },
+    );
   }
 
   @override
@@ -63,27 +53,52 @@ class TaskViewModel extends ChangeNotifier {
   }
 
   Future<void> createTask(TaskModel task) async {
-    await _taskService.createTask(task);
+    try {
+      await _taskService.createTask(task);
+    } catch (e) {
+      rethrow;
+    }
   }
 
-  Future<void> updateStatus(String taskId, String status) async {
-    await _taskService.updateTaskStatus(taskId, status);
+  Future<void> updateStatus(String taskId, String newStatus) async {
+    try {
+      final index = tasks.indexWhere((t) => t.id == taskId);
+      if (index != -1) {
+        final updatedTask = tasks[index].copyWith(status: newStatus);
+        tasks[index] = updatedTask;
+        notifyListeners();
+      }
+      await _taskService.updateTaskStatus(taskId, newStatus);
+    } catch (e) {
+      rethrow;
+    }
   }
 
-  Future<void> updateAssignee(String taskId, String assigneeId, String assigneeName) async {
-    await _taskService.updateTaskAssignee(taskId, assigneeId, assigneeName);
+  Future<void> updateAssignee(
+    String taskId,
+    String assigneeId,
+    String assigneeName,
+  ) async {
+    try {
+      await _taskService.updateTaskAssignee(taskId, assigneeId, assigneeName);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> addTaskNote(String taskId, TaskNote note) async {
+    try {
+      await _taskService.addTaskNote(taskId, note);
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<void> deleteTask(String taskId) async {
-    await _taskService.deleteTask(taskId);
-  }
-
-  List<TaskModel> _filterTasks(List<TaskModel> data) {
-    if (_viewer?.role == 'admin') {
-      return data;
+    try {
+      await _taskService.deleteTask(taskId);
+    } catch (e) {
+      rethrow;
     }
-    final viewerId = _viewer?.uid;
-    if (viewerId == null) return [];
-    return data.where((task) => task.assigneeId == viewerId).toList();
   }
 }

@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:flutter/foundation.dart';
 import '../models/app_user.dart';
 
 class UserService {
@@ -18,7 +18,18 @@ class UserService {
     return AppUser.fromMap(data, snapshot.id);
   }
 
+  Stream<AppUser?> listenToUser(String uid) {
+    if (kDebugMode) print('DEBUG: UserService.listenToUser($uid) called');
+    return _usersRef.doc(uid).snapshots().map((snapshot) {
+      if (kDebugMode) print('DEBUG: UserService.listenToUser($uid) stream emitted');
+      final data = snapshot.data();
+      if (data == null) return null;
+      return AppUser.fromMap(data, snapshot.id);
+    });
+  }
+
   Future<void> createOrUpdateUser(AppUser user) async {
+    if (kDebugMode) print('DEBUG: UserService.createOrUpdateUser(${user.uid})');
     await _usersRef.doc(user.uid).set(user.toMap(), SetOptions(merge: true));
   }
 
@@ -35,14 +46,16 @@ class UserService {
   }
 
   Stream<List<AppUser>> listenToUsers() {
+    if (kDebugMode) print('DEBUG: UserService.listenToUsers() called');
     return _usersRef
         .orderBy('displayName')
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
+        .map((snapshot) {
+          if (kDebugMode) print('DEBUG: UserService.listenToUsers() stream emitted ${snapshot.docs.length} users');
+          return snapshot.docs
               .map((doc) => AppUser.fromMap(doc.data(), doc.id))
-              .toList(),
-        );
+              .toList();
+        });
   }
 
   Future<List<AppUser>> fetchUsersByIds(List<String> ids) async {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/app_user.dart';
 import '../../models/task_models.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/group_viewmodel.dart';
@@ -23,8 +22,6 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
   final _descriptionController = TextEditingController();
   DateTime _deadline = DateTime.now().add(const Duration(days: 3));
   bool _isSubmitting = false;
-  bool _isLoadingMembers = true;
-  List<AppUser> _members = [];
   String? _assigneeId;
 
   @override
@@ -35,178 +32,139 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadMembers();
-    });
-  }
-
-  Future<void> _loadMembers() async {
-    final userViewModel = context.read<UserViewModel>();
-    userViewModel.startListening();
-
-    // Tunggu sejenak agar data terisi jika masih kosong
-    if (userViewModel.users.isEmpty) {
-      await Future.delayed(const Duration(milliseconds: 500));
-    }
-
-    if (mounted) {
-      setState(() {
-        _members = userViewModel.users;
-        _assigneeId = _members.isNotEmpty ? _members.first.uid : null;
-        _isLoadingMembers = false;
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Watch users to keep dropdown updated
-    final allUsers = context.watch<UserViewModel>().users;
-    if (_members.length != allUsers.length) {
-      _members = allUsers;
-      if (_assigneeId == null && _members.isNotEmpty) {
-        _assigneeId = _members.first.uid;
-      }
-    }
+    final groupViewModel = context.watch<GroupViewModel>();
+    final group = groupViewModel.byId(widget.groupId);
+    final userViewModel = context.watch<UserViewModel>();
+    
+    // Only show members of this group
+    final members = userViewModel.users.where((u) => group?.members.contains(u.uid) ?? false).toList();
 
     return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Tugas Baru', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Judul Tugas'),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Judul harus diisi';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(labelText: 'Deskripsi'),
-              minLines: 2,
-              maxLines: 4,
-            ),
-            const SizedBox(height: 12),
-            _isLoadingMembers
-                ? const Center(child: CircularProgressIndicator())
-                : DropdownButtonFormField<String>(
-                    value: _assigneeId,
-                    decoration: const InputDecoration(
-                      labelText: 'Penanggung Jawab',
-                    ),
-                    items: _members
-                        .map(
-                          (member) => DropdownMenuItem(
-                            value: member.uid,
-                            child: Text(member.displayName),
-                          ),
-                        )
-                        .toList(),
-                    validator: (value) {
-                      if (_members.isEmpty) {
-                        return 'Belum ada anggota yang dapat dipilih';
-                      }
-                      if (value == null || value.isEmpty) {
-                        return 'Pilih penanggung jawab';
-                      }
-                      return null;
-                    },
-                    onChanged: (value) => setState(() => _assigneeId = value),
-                  ),
-            if (!_isLoadingMembers && _members.isEmpty) ...[
-              const SizedBox(height: 8),
-              const Text(
-                'Tidak ada anggota sistem. Tambahkan anggota '
-                'sebelum membuat tugas.',
-                style: TextStyle(color: Colors.redAccent),
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Tugas Baru', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'Judul Tugas'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Judul harus diisi';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Deskripsi'),
+                minLines: 2,
+                maxLines: 4,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _assigneeId,
+                decoration: const InputDecoration(
+                  labelText: 'Penanggung Jawab (PJ)',
+                ),
+                items: members
+                    .map(
+                      (member) => DropdownMenuItem(
+                        value: member.uid,
+                        child: Text(member.displayName),
+                      ),
+                    )
+                    .toList(),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Pilih penanggung jawab';
+                  }
+                  return null;
+                },
+                onChanged: (value) => setState(() => _assigneeId = value),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Deadline'),
+                subtitle: Text(
+                  '${_deadline.day}/${_deadline.month}/${_deadline.year} ${_deadline.hour}:${_deadline.minute}',
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.calendar_today),
+                  onPressed: _pickDeadline,
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: _isSubmitting ? null : () => _submit(context),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Buat Tugas'),
               ),
             ],
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Deadline'),
-              subtitle: Text(
-                '${_deadline.day}/${_deadline.month}/${_deadline.year}',
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.calendar_today),
-                onPressed: _pickDeadline,
-              ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _isSubmitting || _members.isEmpty
-                  ? null
-                  : () => _submit(context),
-              child: _isSubmitting
-                  ? const SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Buat Tugas'),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Future<void> _pickDeadline() async {
-    final selected = await showDatePicker(
+    final date = await showDatePicker(
       context: context,
       initialDate: _deadline,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
-    if (selected != null) {
-      setState(() => _deadline = selected);
+    if (date != null && mounted) {
+      final time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_deadline),
+      );
+
+      if (time != null) {
+        setState(() {
+          _deadline = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            time.hour,
+            time.minute,
+          );
+        });
+      }
     }
   }
 
   Future<void> _submit(BuildContext context) async {
     if (!_formKey.currentState!.validate()) return;
     final authViewModel = context.read<AuthViewModel>();
-    final groupViewModel = context.read<GroupViewModel>();
+    final userViewModel = context.read<UserViewModel>();
     final creatorId = authViewModel.currentUser?.uid;
     if (creatorId == null) return;
     if (_assigneeId == null) return;
 
-    final assignee = _members.firstWhere(
-      (member) => member.uid == _assigneeId,
-      orElse: () => AppUser(
-        uid: _assigneeId!,
-        email: '',
-        displayName: 'Tidak diketahui',
-        photoUrl: null,
-        groupIds: const [],
-        role: 'user',
-        createdAt: DateTime.now(),
-      ),
-    );
+    final assignee = userViewModel.users.firstWhere((u) => u.uid == _assigneeId);
 
     setState(() => _isSubmitting = true);
     try {
-      // 1. Pastikan penanggung jawab adalah anggota kelompok
-      final group = groupViewModel.byId(widget.groupId);
-      if (group != null && !group.members.contains(_assigneeId)) {
-        await groupViewModel.addMember(widget.groupId, _assigneeId!);
-      }
-
-      // 2. Buat tugas
       final task = TaskModel(
         id: '',
         groupId: widget.groupId,

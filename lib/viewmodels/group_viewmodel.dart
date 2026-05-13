@@ -1,7 +1,5 @@
 import 'dart:async';
-
 import 'package:flutter/foundation.dart';
-
 import '../models/group_model.dart';
 import '../services/group_service.dart';
 
@@ -22,6 +20,7 @@ class GroupViewModel extends ChangeNotifier {
     if (_userId == userId) return;
     _userId = userId;
     _groupSubscription?.cancel();
+    _groupSubscription = null;
     groups = [];
     selectedGroupId = null;
     errorMessage = null;
@@ -34,17 +33,10 @@ class GroupViewModel extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    if (kDebugMode) {
-      print('DEBUG: Attaching user $userId to GroupViewModel');
-    }
-
     _groupSubscription = _groupService
         .listenToGroups(userId)
         .listen(
           (data) {
-            if (kDebugMode) {
-              print('DEBUG: Received ${data.length} groups for user $userId');
-            }
             groups = data;
             selectedGroupId ??= data.isNotEmpty ? data.first.id : null;
             isLoading = false;
@@ -52,9 +44,6 @@ class GroupViewModel extends ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            if (kDebugMode) {
-              print('DEBUG: Error listening to groups: $error');
-            }
             isLoading = false;
             errorMessage = error.toString();
             notifyListeners();
@@ -72,20 +61,18 @@ class GroupViewModel extends ChangeNotifier {
     required String name,
     required String description,
     required String ownerId,
+    required String leaderId,
+    required List<String> members,
   }) async {
     try {
-      if (kDebugMode) {
-        print('DEBUG: Creating group "$name" for owner $ownerId');
-      }
       await _groupService.createGroup(
         name: name,
         description: description,
         ownerId: ownerId,
+        leaderId: leaderId,
+        members: members,
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('DEBUG: Error creating group: $e');
-      }
       rethrow;
     }
   }
@@ -115,14 +102,8 @@ class GroupViewModel extends ChangeNotifier {
 
   Future<void> addMember(String groupId, String userId) async {
     try {
-      if (kDebugMode) {
-        print('DEBUG: Adding user $userId to group $groupId');
-      }
       await _groupService.addMember(groupId: groupId, memberId: userId);
     } catch (e) {
-      if (kDebugMode) {
-        print('DEBUG: Error adding member: $e');
-      }
       rethrow;
     }
   }
@@ -131,17 +112,16 @@ class GroupViewModel extends ChangeNotifier {
     required String groupId,
     required String name,
     required String description,
+    String? leaderId,
   }) async {
     try {
       await _groupService.updateGroup(
         groupId: groupId,
         name: name,
         description: description,
+        leaderId: leaderId,
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('DEBUG: Error updating group: $e');
-      }
       rethrow;
     }
   }
@@ -154,9 +134,6 @@ class GroupViewModel extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('DEBUG: Error deleting group: $e');
-      }
       rethrow;
     }
   }

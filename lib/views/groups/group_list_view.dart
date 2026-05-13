@@ -18,7 +18,9 @@ class GroupListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final groupViewModel = context.watch<GroupViewModel>();
-    final isAdmin = context.watch<AuthViewModel>().isAdmin;
+    final authViewModel = context.watch<AuthViewModel>();
+    final isAdmin = authViewModel.isAdmin;
+    final currentUser = authViewModel.currentUser;
 
     if (groupViewModel.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -54,11 +56,13 @@ class GroupListView extends StatelessWidget {
         itemBuilder: (context, index) {
           final group = groupViewModel.groups[index];
           final isSelected = group.id == groupViewModel.selectedGroupId;
+          final isLeader = group.leaderId == currentUser?.uid;
 
           return _GroupPill(
             name: group.name,
             selected: isSelected,
             isAdmin: isAdmin,
+            isLeader: isLeader,
             onTap: () => groupViewModel.selectGroup(group.id),
             onLongPress: isAdmin ? () => _showAdminMenu(context, group) : null,
           );
@@ -180,6 +184,7 @@ class _GroupPill extends StatelessWidget {
     required this.name,
     required this.selected,
     required this.isAdmin,
+    required this.isLeader,
     required this.onTap,
     required this.onLongPress,
   });
@@ -187,6 +192,7 @@ class _GroupPill extends StatelessWidget {
   final String name;
   final bool selected;
   final bool isAdmin;
+  final bool isLeader;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -220,6 +226,10 @@ class _GroupPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (isLeader) ...[
+                Icon(Icons.star, size: 16, color: selected ? fg : Colors.orange),
+                const SizedBox(width: 6),
+              ],
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 220),
                 child: Text(

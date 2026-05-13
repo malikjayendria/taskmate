@@ -1,8 +1,6 @@
 import 'dart:async';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
@@ -18,6 +16,7 @@ class AuthViewModel extends ChangeNotifier {
   String? errorMessage;
 
   StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<AppUser?>? _userProfileSubscription;
 
   bool get isAdmin => currentUser?.role == 'admin';
 
@@ -25,36 +24,47 @@ class AuthViewModel extends ChangeNotifier {
     _authSubscription ??= _authService.userChanges.listen((firebaseUser) {
       if (firebaseUser == null) {
         currentUser = null;
+        _userProfileSubscription?.cancel();
+        _userProfileSubscription = null;
         notifyListeners();
         return;
       }
-      _loadUserProfile(firebaseUser);
+      _listenToProfile(firebaseUser.uid);
     });
   }
 
-  Future<void> _loadUserProfile(User firebaseUser) async {
-    final existing = await _userService.fetchUser(firebaseUser.uid);
-    if (existing != null) {
-      currentUser = existing;
-    } else {
-      final newUser = AppUser(
-        uid: firebaseUser.uid,
-        email: firebaseUser.email ?? '',
-        displayName: firebaseUser.displayName ?? '',
-        photoUrl: firebaseUser.photoURL,
-        groupIds: const [],
-        role: 'user',
-        createdAt: DateTime.now(),
-      );
-      await _userService.createOrUpdateUser(newUser);
-      currentUser = newUser;
-    }
-    notifyListeners();
+  void _listenToProfile(String uid) {
+    _userProfileSubscription?.cancel();
+    _userProfileSubscription = _userService.listenToUser(uid).listen((appUser) {
+      if (appUser != null) {
+        currentUser = appUser;
+      } else {
+        _createInitialProfile(uid);
+      }
+      notifyListeners();
+    });
+  }
+
+  Future<void> _createInitialProfile(String uid) async {
+    final firebaseUser = _authService.currentUser;
+    if (firebaseUser == null) return;
+
+    final newUser = AppUser(
+      uid: uid,
+      email: firebaseUser.email ?? '',
+      displayName: firebaseUser.displayName ?? '',
+      photoUrl: firebaseUser.photoURL,
+      groupIds: const [],
+      role: 'user',
+      createdAt: DateTime.now(),
+    );
+    await _userService.createOrUpdateUser(newUser);
   }
 
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _userProfileSubscription?.cancel();
     super.dispose();
   }
 

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../models/task_models.dart';
 
 class TaskService {
@@ -18,13 +17,13 @@ class TaskService {
   Stream<List<TaskModel>> listenToTasks(String groupId) {
     return _tasksRef
         .where('groupId', isEqualTo: groupId)
-        .orderBy('createdAt', descending: true)
+        .orderBy('deadline', descending: false)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
+        .map((snapshot) {
+          return snapshot.docs
               .map((doc) => TaskModel.fromMap(doc.data(), doc.id))
-              .toList(),
-        );
+              .toList();
+        });
   }
 
   Future<void> updateTaskStatus(String taskId, String newStatus) async {
@@ -35,6 +34,12 @@ class TaskService {
     await _tasksRef.doc(taskId).update({
       'assigneeId': assigneeId,
       'assigneeName': assigneeName,
+    });
+  }
+
+  Future<void> addTaskNote(String taskId, TaskNote note) async {
+    await _tasksRef.doc(taskId).update({
+      'notes': FieldValue.arrayUnion([note.toMap()]),
     });
   }
 

@@ -23,6 +23,9 @@ class GroupDashboardView extends StatelessWidget {
     final isAdmin = authViewModel.isAdmin;
     final user = authViewModel.currentUser;
 
+    final isLeader = selectedGroup?.leaderId == user?.uid;
+    final canCreateTask = isAdmin || isLeader;
+
     return Scaffold(
       body: SafeArea(
         child: NestedScrollView(
@@ -148,7 +151,7 @@ class GroupDashboardView extends StatelessWidget {
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                       ),
-                      if (isAdmin)
+                      if (canCreateTask)
                         FilledButton.icon(
                           onPressed: selectedGroupId == null
                               ? null
@@ -178,11 +181,11 @@ class GroupDashboardView extends StatelessWidget {
           ),
         ),
       ),
-      floatingActionButton: isAdmin
+      floatingActionButton: canCreateTask
           ? FloatingActionButton(
               heroTag: 'quick-actions',
               onPressed: () =>
-                  _openQuickActions(context, selectedGroupId: selectedGroupId),
+                  _openQuickActions(context, selectedGroupId: selectedGroupId, isAdmin: isAdmin),
               child: const Icon(Icons.add),
             )
           : null,
@@ -339,6 +342,7 @@ class GroupDashboardView extends StatelessWidget {
   Future<void> _openQuickActions(
     BuildContext context, {
     required String? selectedGroupId,
+    required bool isAdmin,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -349,14 +353,15 @@ class GroupDashboardView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: const Icon(Icons.group_add),
-                title: const Text('Buat Kelompok'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _openCreateGroupSheet(context);
-                },
-              ),
+              if (isAdmin)
+                ListTile(
+                  leading: const Icon(Icons.group_add),
+                  title: const Text('Buat Kelompok'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openCreateGroupSheet(context);
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.add_task),
                 title: const Text('Buat Tugas'),

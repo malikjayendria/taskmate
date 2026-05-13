@@ -6,6 +6,7 @@ class GroupModel {
     required this.name,
     required this.description,
     required this.ownerId,
+    required this.leaderId,
     required this.members,
     required this.createdAt,
   });
@@ -14,6 +15,7 @@ class GroupModel {
   final String name;
   final String description;
   final String ownerId;
+  final String leaderId;
   final List<String> members;
   final DateTime createdAt;
 
@@ -25,6 +27,7 @@ class GroupModel {
       name: data['name'] ?? '',
       description: data['description'] ?? '',
       ownerId: data['ownerId'] ?? '',
+      leaderId: data['leaderId'] ?? '',
       members: List<String>.from(data['members'] ?? []),
       createdAt: createdAt is Timestamp
           ? createdAt.toDate()
@@ -39,6 +42,7 @@ class GroupModel {
       'name': name,
       'description': description,
       'ownerId': ownerId,
+      'leaderId': leaderId,
       'members': members,
       'createdAt': Timestamp.fromDate(createdAt),
     };
